@@ -1,0 +1,43 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Theme.WeatherApp" parent="Theme.AppCompat.Light.NoActionBar">
+        <!-- Основная тема вашего приложения -->
+        <!-- ... другие атрибуты вашей основной темы ... -->
+
+        <!-- Применяем кастомный стиль для стандартного TimePickerDialog -->
+        <item name="android:timePickerDialogTheme">@style/CustomTimePickerDialog</item>
+    </style>
+
+    <style name="CustomTimePickerDialog" parent="Theme.MaterialComponents.Light.Dialog">
+        <!-- Цвет фона всего окна диалога -->
+        <item name="android:windowBackground">@color/white</item>
+
+        <!-- Цвет фона основной контентной области диалога -->
+        <!-- Этот атрибут может быть более подходящим для изменения фона "внутренностей" диалога,
+             чем windowBackground, который влияет на все окно. -->
+        <item name="android:colorBackground">@color/white_blue</item> <!-- Или @color/white, если хотите белый фон контента -->
+
+        <!-- Акцентный цвет (используется для подсветки выбранного времени, ползунков и т.д.) -->
+        <item name="colorAccent">@color/dark_blue</item> <!-- Обычно акцентный цвет отличается от основного фона -->
+
+        <!-- Основной цвет текста в диалоге -->
+        <item name="android:textColorPrimary">@color/dark_blue</item>
+        <!-- Вторичный цвет текста (например, для заголовков или менее важной информации) -->
+        <item name="android:textColorSecondary">@color/dark_blue</item> <!-- Может быть немного светлее dark_blue -->
+
+        <!-- Стили для кнопок "OK" и "Отмена" -->
+        <item name="buttonBarPositiveButtonStyle">@style/CustomTimePickerDialog.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CustomTimePickerDialog.Button</item>
+        <item name="buttonBarNeutralButtonStyle">@style/CustomTimePickerDialog.Button</item> <!-- На всякий случай, если появится нейтральная кнопка -->
+    </style>
+
+    <!-- Кастомный стиль для кнопок в TimePickerDialog -->
+    <style name="CustomTimePickerDialog.Button" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <!-- Цвет текста кнопок -->
+        <item name="android:textColor">@color/dark_blue</item>
+        <!-- Вы можете добавить другие атрибуты здесь, если нужно, например, фон кнопки,
+             но TextButton.Dialog обычно имеет прозрачный фон. -->
+        <!-- <item name="android:backgroundTint">@color/your_button_background_color</item> -->
+    </style>
+
+</resources>

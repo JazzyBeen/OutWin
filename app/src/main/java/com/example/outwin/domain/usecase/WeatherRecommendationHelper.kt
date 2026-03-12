@@ -1,7 +1,7 @@
-package com.example.outwin
+package com.example.outwin.domain.usecase
 
-import android.text.Html
 import androidx.core.text.HtmlCompat
+import com.example.outwin.data.api.ForecastItem
 
 object WeatherRecommendationHelper {
 

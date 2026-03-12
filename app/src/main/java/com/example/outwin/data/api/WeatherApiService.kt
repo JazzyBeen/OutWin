@@ -1,4 +1,4 @@
-package com.example.outwin
+package com.example.outwin.data.api
 
 import retrofit2.http.GET
 import retrofit2.http.Query

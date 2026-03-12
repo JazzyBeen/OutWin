@@ -1,4 +1,4 @@
-package com.example.outwin
+package com.example.outwin.data.api
 
 import com.google.gson.annotations.SerializedName
 

@@ -9,10 +9,8 @@
 
 ##  Скриншоты
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/0b39b981-2f86-49a4-9899-4372d6a6828c" width="200" />
-  <img src="https://github.com/user-attachments/assets/9bf960a5-c26d-4489-b9f9-b4f184747e20" width="200" />
-  <img src="https://github.com/user-attachments/assets/deb50b22-d4ed-4b80-9d2d-967400b7a528" width="200" />
-  <img src="https://github.com/user-attachments/assets/9a6d7097-3b15-4e04-9490-f88b7e9c32c8" width="200" />
+  <img src="https://github.com/user-attachments/assets/0982a334-e24a-4777-90c7-2c5a30456d66" width="200" />
+
 </p>
 
 ---

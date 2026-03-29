@@ -9,7 +9,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,7 +23,10 @@ class MainViewModel @Inject constructor(
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
     init {
-        observeCounter()
+        observeCounters()
+        viewModelScope.launch {
+            analyticsRepository.logAppOpen()
+        }
     }
 
     fun fetchWeather(useSavedLocationFallback: Boolean = false) {
@@ -47,14 +49,10 @@ class MainViewModel @Inject constructor(
             if (location != null) {
                 weatherRepository.getWeather(location.latitude, location.longitude).fold(
                     onSuccess = { weatherInfo ->
-                        val currentState = _uiState.value
-                        val isActive = if (currentState is MainUiState.Success) currentState.isCounterActive else false
-                        _uiState.value = MainUiState.Success(weatherInfo, 0L, isActive)
-                        observeCounter()
+                        val counters = (_uiState.value as? MainUiState.Success)?.reactionCounters ?: emptyMap()
+                        _uiState.value = MainUiState.Success(weatherInfo, counters)
                     },
-                    onFailure = {
-                        _uiState.value = MainUiState.Error(it.message ?: "Ошибка загрузки")
-                    }
+                    onFailure = { _uiState.value = MainUiState.Error(it.message ?: "Ошибка загрузки") }
                 )
             } else {
                 _uiState.value = MainUiState.Error("Геолокация недоступна")
@@ -62,23 +60,20 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun toggleCounter() {
-        val currentState = _uiState.value as? MainUiState.Success ?: return
-        val newStateActive = !currentState.isCounterActive
-        _uiState.update { currentState.copy(isCounterActive = newStateActive) }
-
-        viewModelScope.launch {
-            if (newStateActive) analyticsRepository.incrementCounter()
-            else analyticsRepository.decrementCounter()
-        }
+    fun addReaction(reactionId: String) {
+        viewModelScope.launch { analyticsRepository.incrementReaction(reactionId) }
     }
 
-    private fun observeCounter() {
+    fun removeReaction(reactionId: String) {
+        viewModelScope.launch { analyticsRepository.decrementReaction(reactionId) }
+    }
+
+    private fun observeCounters() {
         viewModelScope.launch {
-            analyticsRepository.getRecommendationCounter().collect { count ->
+            analyticsRepository.getReactionCounters().collect { counters ->
                 val currentState = _uiState.value
                 if (currentState is MainUiState.Success) {
-                    _uiState.value = currentState.copy(counter = count)
+                    _uiState.value = currentState.copy(reactionCounters = counters)
                 }
             }
         }

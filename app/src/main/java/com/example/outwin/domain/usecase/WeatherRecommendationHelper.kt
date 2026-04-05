@@ -226,7 +226,7 @@ object WeatherRecommendationHelper {
                     }
                 }
             }
-            temp in 10.0..16.9 -> {
+            temp in 10.0..16.99 -> {
                 when {
                     humidity < 40 -> {
                         when {

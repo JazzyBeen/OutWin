@@ -28,14 +28,17 @@ object DataModule {
 
     @Provides
     @Singleton
-    fun provideWeatherRepository(apiService: com.example.outwin.data.api.WeatherApiService): WeatherRepository {
-        return WeatherRepositoryImpl(apiService)
+    fun provideWeatherRepository(
+        apiService: com.example.outwin.data.api.WeatherApiService,
+        @ApplicationContext context: Context
+    ): WeatherRepository {
+        return WeatherRepositoryImpl(apiService, context)
     }
 
     @Provides
     @Singleton
-    fun provideAnalyticsRepository(): AnalyticsRepository {
-        return AnalyticsRepositoryImpl()
+    fun provideAnalyticsRepository(@ApplicationContext context: Context): AnalyticsRepository {
+        return AnalyticsRepositoryImpl(context)
     }
 
     @Provides

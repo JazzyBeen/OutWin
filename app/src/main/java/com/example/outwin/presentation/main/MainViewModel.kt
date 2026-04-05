@@ -24,9 +24,6 @@ class MainViewModel @Inject constructor(
 
     init {
         observeCounters()
-        viewModelScope.launch {
-            analyticsRepository.logAppOpen()
-        }
     }
 
     fun fetchWeather(useSavedLocationFallback: Boolean = false) {
@@ -51,6 +48,8 @@ class MainViewModel @Inject constructor(
                     onSuccess = { weatherInfo ->
                         val counters = (_uiState.value as? MainUiState.Success)?.reactionCounters ?: emptyMap()
                         _uiState.value = MainUiState.Success(weatherInfo, counters)
+
+                        analyticsRepository.logAppOpen(weatherInfo.cityName)
                     },
                     onFailure = { _uiState.value = MainUiState.Error(it.message ?: "Ошибка загрузки") }
                 )
@@ -60,12 +59,13 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    fun addReaction(reactionId: String) {
-        viewModelScope.launch { analyticsRepository.incrementReaction(reactionId) }
-    }
+    fun addReaction(reactionId: String) = viewModelScope.launch { analyticsRepository.incrementReaction(reactionId) }
+    fun removeReaction(reactionId: String) = viewModelScope.launch { analyticsRepository.decrementReaction(reactionId) }
 
-    fun removeReaction(reactionId: String) {
-        viewModelScope.launch { analyticsRepository.decrementReaction(reactionId) }
+    fun setOnlineStatus(isOnline: Boolean) = viewModelScope.launch { analyticsRepository.setOnlineStatus(isOnline) }
+    fun updateNotificationDays(days: Set<Int>) = viewModelScope.launch { analyticsRepository.saveNotificationPrefs(days) }
+    fun showError(message: String) {
+        _uiState.value = MainUiState.Error(message)
     }
 
     private fun observeCounters() {

@@ -38,9 +38,12 @@ fun OutwinApp() {
     NavHost(navController = navController, startDestination = "main_screen") {
         composable("main_screen") {
             MainScreen(
-                onNavigateToNotifications = {
-                    navController.navigate("notification_screen")
-                }
+                onNavigateToSettings = { navController.navigate("settings_screen") }
+            )
+        }
+        composable("settings_screen") {
+            SettingsScreen(
+                onBack = { navController.popBackStack() }
             )
         }
     }

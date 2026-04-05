@@ -1,5 +1,12 @@
 package com.example.outwin.domain.model
 
+data class DailyForecast(
+    val date: String,
+    val minTemp: Int,
+    val maxTemp: Int,
+    val recommendationText: String
+)
+
 data class WeatherInfo(
     val cityName: String,
     val currentTemp: Int,
@@ -15,5 +22,7 @@ data class WeatherInfo(
     val visibility: Int,
     val pop: Int,
     val sunrise: String,
-    val sunset: String
+    val sunset: String,
+
+    val futureForecasts: List<DailyForecast>
 )

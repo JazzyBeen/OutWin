@@ -65,7 +65,7 @@ class WeatherNotificationWorker @AssistedInject constructor(
         )
 
         val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher) // Убедитесь, что иконка существует
+            .setSmallIcon(R.drawable.baseline_auto_awesome_24)
             .setContentTitle(title)
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))

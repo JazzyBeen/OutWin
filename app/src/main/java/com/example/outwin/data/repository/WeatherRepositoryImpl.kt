@@ -1,9 +1,13 @@
 package com.example.outwin.data.repository
 
+import android.content.Context
+import android.location.Location
 import com.example.outwin.data.api.WeatherApiService
+import com.example.outwin.domain.model.DailyForecast
 import com.example.outwin.domain.model.WeatherInfo
 import com.example.outwin.domain.repository.WeatherRepository
 import com.example.outwin.domain.usecase.WeatherRecommendationHelper
+import com.google.gson.Gson
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -12,12 +16,37 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 class WeatherRepositoryImpl(
-    private val apiService: WeatherApiService
+    private val apiService: WeatherApiService,
+    context: Context
 ) : WeatherRepository {
 
-    private val apiKey = "YOUR_API"
+    private val apiKey = "ваш_ключ"
+
+    private val prefs = context.getSharedPreferences("weather_cache", Context.MODE_PRIVATE)
+    private val gson = Gson()
 
     override suspend fun getWeather(lat: Double, lon: Double): Result<WeatherInfo> {
+        val lastLat = prefs.getFloat("last_lat", Float.MAX_VALUE).toDouble()
+        val lastLon = prefs.getFloat("last_lon", Float.MAX_VALUE).toDouble()
+        val lastTime = prefs.getLong("last_time", 0L)
+        val cachedData = prefs.getString("weather_data", null)
+
+        val results = FloatArray(1)
+        Location.distanceBetween(lat, lon, lastLat, lastLon, results)
+        val distanceMeters = results[0]
+
+        val isCacheValid = distanceMeters < 3000 && (System.currentTimeMillis() - lastTime) < 3600000
+
+        if (cachedData != null && isCacheValid) {
+            try {
+                val weatherInfo = gson.fromJson(cachedData, WeatherInfo::class.java)
+                if (weatherInfo.futureForecasts != null) {
+                    return Result.success(weatherInfo)
+                }
+            } catch (e: Exception) {
+            }
+        }
+
         return try {
             val response = apiService.getForecast(lat, lon, apiKey)
             if (response.list.isEmpty()) throw Exception("Нет данных о прогнозе")
@@ -42,7 +71,6 @@ class WeatherRepositoryImpl(
                 avgTemp, avgHumidity, avgWindSpeed, condition
             )
 
-
             val pressureMmHg = (currentForecast.main.pressure * 0.750062).roundToInt()
             val visibilityKm = (currentForecast.visibility ?: 10000) / 1000
             val popPercent = ((currentForecast.pop ?: 0.0) * 100).roundToInt()
@@ -58,6 +86,34 @@ class WeatherRepositoryImpl(
                 Instant.ofEpochSecond(response.city.sunset).atOffset(zoneOffset).format(timeFormatter)
             } else "--:--"
 
+            val allDates = response.list.map { it.dtTxt.substring(0, 10) }.distinct()
+            val futureDates = allDates.filter { it != todayDate }.take(4)
+            val dateFormatter = DateTimeFormatter.ofPattern("dd.MM", Locale.getDefault())
+
+            val futureForecasts = futureDates.map { dateStr ->
+                val dayData = response.list.filter { it.dtTxt.startsWith(dateStr) }
+                val dAvgTemp = dayData.map { it.main.temp }.average()
+                val dAvgHumidity = dayData.map { it.main.humidity }.average().toInt()
+                val dAvgWindSpeed = dayData.map { it.wind.speed }.average()
+                val dCondition = WeatherRecommendationHelper.getDayWeatherCondition(dayData)
+
+                val dMinT = dayData.minOfOrNull { it.main.temp }?.toInt() ?: 0
+                val dMaxT = dayData.maxOfOrNull { it.main.temp }?.toInt() ?: 0
+                val dRecommendation = WeatherRecommendationHelper.getClothingRecommendation(
+                    dAvgTemp, dAvgHumidity, dAvgWindSpeed, dCondition
+                )
+
+                val parsedDate = LocalDate.parse(dateStr)
+                val displayDate = parsedDate.format(dateFormatter)
+
+                DailyForecast(
+                    date = displayDate,
+                    minTemp = dMinT,
+                    maxTemp = dMaxT,
+                    recommendationText = dRecommendation
+                )
+            }
+
             val weatherInfo = WeatherInfo(
                 cityName = response.city.name,
                 currentTemp = currentForecast.main.temp.toInt(),
@@ -72,10 +128,26 @@ class WeatherRepositoryImpl(
                 visibility = visibilityKm,
                 pop = popPercent,
                 sunrise = sunriseStr,
-                sunset = sunsetStr
+                sunset = sunsetStr,
+                futureForecasts = futureForecasts
             )
+
+            prefs.edit()
+                .putFloat("last_lat", lat.toFloat())
+                .putFloat("last_lon", lon.toFloat())
+                .putLong("last_time", System.currentTimeMillis())
+                .putString("weather_data", gson.toJson(weatherInfo))
+                .apply()
+
             Result.success(weatherInfo)
+
         } catch (e: Exception) {
+            if (cachedData != null) {
+                try {
+                    val weatherInfo = gson.fromJson(cachedData, WeatherInfo::class.java)
+                    return Result.success(weatherInfo)
+                } catch (ex: Exception) {}
+            }
             Result.failure(e)
         }
     }

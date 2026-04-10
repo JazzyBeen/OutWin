@@ -165,7 +165,7 @@ fun MainScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .alpha(globalAlpha)
+                .graphicsLayer { alpha = globalAlpha }
         ) {
             Row(
                 modifier = Modifier
@@ -288,6 +288,10 @@ fun SuccessStateView(
     var carReaction by remember { mutableStateOf<Int?>(null) }
     var snackbarData by remember { mutableStateOf<ReactionSnackbarData?>(null) }
 
+    val allCompositions = ReactionAnimations.associateWith { resId ->
+        rememberLottieComposition(LottieCompositionSpec.RawRes(resId)).value
+    }
+
     val globalAlpha by animateFloatAsState(if (activeMenu != null) 0.3f else 1f, label = "globalAlpha")
 
     LaunchedEffect(snackbarData) {
@@ -297,21 +301,23 @@ fun SuccessStateView(
         }
     }
 
-    val handleReactionClick: (Int?, Int?, (Int?) -> Unit) -> Unit = { newReaction, oldReaction, updateState ->
-        if (newReaction != null) {
-            if (oldReaction != null && oldReaction != newReaction) onRemoveReaction(oldReaction)
+    val handleReactionClick: (Int?, Int?, (Int?) -> Unit) -> Unit = remember(state.reactionCounters) {
+        { newReaction, oldReaction, updateState ->
+            if (newReaction != null) {
+                if (oldReaction != null && oldReaction != newReaction) onRemoveReaction(oldReaction)
 
-            val key = context.resources.getResourceEntryName(newReaction)
-            val currentGlobalCount = state.reactionCounters[key] ?: 0L
+                val key = context.resources.getResourceEntryName(newReaction)
+                val currentGlobalCount = state.reactionCounters[key] ?: 0L
 
-            onAddReaction(newReaction)
-            updateState(newReaction)
+                onAddReaction(newReaction)
+                updateState(newReaction)
 
-            snackbarData = ReactionSnackbarData(count = currentGlobalCount + 1L, lottieRes = newReaction)
-        } else {
-            if (oldReaction != null) onRemoveReaction(oldReaction)
-            updateState(null)
-            snackbarData = null
+                snackbarData = ReactionSnackbarData(count = currentGlobalCount + 1L, lottieRes = newReaction)
+            } else {
+                if (oldReaction != null) onRemoveReaction(oldReaction)
+                updateState(null)
+                snackbarData = null
+            }
         }
     }
 
@@ -326,7 +332,7 @@ fun SuccessStateView(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .alpha(globalAlpha)
+                    .graphicsLayer { alpha = globalAlpha }
                     .horizontalScroll(rememberScrollState())
                     .padding(bottom = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -344,7 +350,7 @@ fun SuccessStateView(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .alpha(globalAlpha)
+                    .graphicsLayer { alpha = globalAlpha }
                     .background(TgCard, RoundedCornerShape(24.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
@@ -371,6 +377,7 @@ fun SuccessStateView(
                 contentAlpha = globalAlpha,
                 menuId = "clothes",
                 activeMenu = activeMenu,
+                allCompositions = allCompositions,
                 onMenuStateChanged = { onMenuStateChanged(it) },
                 selectedReactionRes = clothesReaction,
                 globalCounters = state.reactionCounters,
@@ -390,6 +397,7 @@ fun SuccessStateView(
                 contentAlpha = globalAlpha,
                 menuId = "car",
                 activeMenu = activeMenu,
+                allCompositions = allCompositions,
                 onMenuStateChanged = { onMenuStateChanged(it) },
                 selectedReactionRes = carReaction,
                 globalCounters = state.reactionCounters,
@@ -403,7 +411,7 @@ fun SuccessStateView(
             }
             if (!promoClosed) {
                 PromoBannerPager(
-                    modifier = Modifier.alpha(globalAlpha),
+                    modifier = Modifier.graphicsLayer { alpha = globalAlpha },
                     onAllClosed = { promoClosed = it }
                 )
             }
@@ -412,7 +420,7 @@ fun SuccessStateView(
                 Spacer(modifier = Modifier.height(16.dp))
             }
             NotificationDaysBlock(
-                modifier = Modifier.alpha(globalAlpha),
+                modifier = Modifier.graphicsLayer { alpha = globalAlpha },
                 onDaysChanged = onDaysChanged
             )
 
@@ -421,7 +429,7 @@ fun SuccessStateView(
             if (state.weatherInfo.futureForecasts?.isNotEmpty() == true) {
                 FutureForecastPager(
                     forecasts = state.weatherInfo.futureForecasts,
-                    modifier = Modifier.alpha(globalAlpha)
+                    modifier = Modifier.graphicsLayer { alpha = globalAlpha }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -429,7 +437,7 @@ fun SuccessStateView(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .alpha(globalAlpha)
+                    .graphicsLayer { alpha = globalAlpha }
                     .background(TgCard, RoundedCornerShape(24.dp))
                     .clip(RoundedCornerShape(24.dp))
                     .clickable { onNavigateToSettings() }
@@ -462,8 +470,13 @@ fun SuccessStateView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("${data.count} пользователей отреагировали ", color = TgTextWhite, fontSize = 14.sp, fontFamily = RobotoFont, fontWeight = FontWeight.Medium)
-                        val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(data.lottieRes))
-                        LottieAnimation(composition = composition, iterations = LottieConstants.IterateForever, modifier = Modifier.size(24.dp))
+                        val composition = allCompositions[data.lottieRes]
+                        LottieAnimation(
+                            composition = composition,
+                            iterations = LottieConstants.IterateForever,
+                            renderMode = RenderMode.HARDWARE,
+                            modifier = Modifier.size(24.dp)
+                        )
                     }
                 }
             }
@@ -783,6 +796,7 @@ fun TelegramReactionBlock(
     contentAlpha: Float,
     menuId: String,
     activeMenu: String?,
+    allCompositions: Map<Int, com.airbnb.lottie.LottieComposition?>,
     onMenuStateChanged: (String?) -> Unit,
     selectedReactionRes: Int?,
     globalCounters: Map<String, Long>,
@@ -793,20 +807,6 @@ fun TelegramReactionBlock(
     val density = LocalDensity.current
     val config = LocalConfiguration.current
     val showMenu = activeMenu == menuId
-
-    val menuCompositions = ReactionAnimations.map { resId ->
-        rememberLottieComposition(LottieCompositionSpec.RawRes(resId))
-    }
-
-    val selectedResult = if (selectedReactionRes != null) {
-        rememberLottieComposition(LottieCompositionSpec.RawRes(selectedReactionRes))
-    } else {
-        androidx.compose.runtime.remember {
-            object : androidx.compose.runtime.State<com.airbnb.lottie.LottieComposition?> {
-                override val value: com.airbnb.lottie.LottieComposition? = null
-            }
-        }
-    }
 
     var popupVisible by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
 
@@ -837,7 +837,8 @@ fun TelegramReactionBlock(
         ) {
             content()
 
-            if (selectedReactionRes != null && selectedResult.value != null) {
+            val selectedComposition = selectedReactionRes?.let { allCompositions[it] }
+            if (selectedReactionRes != null && selectedComposition != null) {
                 val key = androidx.compose.runtime.remember(selectedReactionRes) {
                     context.resources.getResourceEntryName(selectedReactionRes)
                 }
@@ -854,7 +855,7 @@ fun TelegramReactionBlock(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         LottieAnimation(
-                            composition = selectedResult.value,
+                            composition = selectedComposition,
                             iterations = LottieConstants.IterateForever,
                             renderMode = RenderMode.HARDWARE,
                             modifier = Modifier.size(26.dp)
@@ -873,8 +874,8 @@ fun TelegramReactionBlock(
         }
 
         if (popupVisible) {
-            val menuWidth = config.screenWidthDp.dp - 32.dp
-            val yOffset = with(density) { -70.dp.roundToPx() }
+            val menuWidth = remember(config.screenWidthDp) { config.screenWidthDp.dp - 32.dp }
+            val yOffset = remember(density) { with(density) { -70.dp.roundToPx() } }
 
             Popup(
                 alignment = Alignment.TopCenter,
@@ -895,7 +896,7 @@ fun TelegramReactionBlock(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         ReactionAnimations.forEachIndexed { index, animRes ->
-                            val composition = menuCompositions[index].value
+                            val composition = allCompositions[animRes]
 
                             Box(
                                 modifier = Modifier
